@@ -14,7 +14,9 @@ class _DrawerWidgetState extends State<DrawerWidget> {
 
   void userLogout() {
     FirebaseAuth.instance.signOut();
-    snackMessage("User logged out", Colors.red);
+    Future.delayed(const Duration(milliseconds: 200), () {
+      snackMessage("User logged out", Colors.red);
+    });
   }
 
   snackMessage(String message, Color color) {
@@ -24,6 +26,7 @@ class _DrawerWidgetState extends State<DrawerWidget> {
         backgroundColor: color,
         showCloseIcon: true,
         closeIconColor: Colors.white,
+        key: const Key("logout"),
         duration: const Duration(seconds: 2),
       ),
     );

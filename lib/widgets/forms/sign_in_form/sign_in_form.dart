@@ -26,7 +26,9 @@ class _SignInFormState extends State<SignInForm> {
         email: emailController.text,
         password: passwordController.text,
       );
-      snackMessage("Successfully logged in", Colors.green);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        snackMessage("Successfully logged in", Colors.green);
+      });
     } catch (e) {
       setState(() {
         loading = false;

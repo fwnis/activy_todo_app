@@ -36,7 +36,9 @@ class _SignUpFormState extends State<SignUpForm> {
         "name": nameController.text,
         "email": credential.user?.email,
       });
-      snackMessage("Account successfully created", Colors.green);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        snackMessage("Account successfully created", Colors.green);
+      });
     } on FirebaseAuthException catch (e) {
       setState(() {
         loading = false;

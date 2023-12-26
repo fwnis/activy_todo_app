@@ -17,7 +17,8 @@ class _DatePickerWidgetState extends State<DatePickerWidget> {
   void initState() {
     super.initState();
     _datePickerController = DatePickerController();
-    Future.delayed(const Duration(milliseconds: 500), () {
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _datePickerController.animateToSelection(curve: Curves.easeInOut);
     });
   }

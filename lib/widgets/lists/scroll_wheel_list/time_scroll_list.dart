@@ -22,27 +22,18 @@ class _TimeScrollListWidgetState extends State<TimeScrollListWidget> {
     }
   }
 
-  int convert24HourFormat(int number) {
-    if (number > 12) {
-      return number - 12;
-    } else {
-      return number;
-    }
-  }
-
   handleTime() {
-    final amOrPm = isAm == 0 ? hour : hour + 12;
     final day = addZeroToNumber(NewTaskWidget.date.value.day);
     final month = addZeroToNumber(NewTaskWidget.date.value.month);
     final year = NewTaskWidget.date.value.year;
-    final hour2 = addZeroToNumber(amOrPm);
+    final hour2 = addZeroToNumber(hour);
     final minute2 = addZeroToNumber(minute);
 
     final date = DateTime.parse("$year-$month-$day $hour2:$minute2:00");
-    NewTaskWidget.time.value = date;
+    NewTaskWidget.date.value = date;
   }
 
-  int hour = 1;
+  int hour = 0;
   int minute = 0;
   int isAm = 0;
 
@@ -57,14 +48,13 @@ class _TimeScrollListWidgetState extends State<TimeScrollListWidget> {
             children: [
               // hours
               ScrollWheel(
-                position:
-                    convert24HourFormat(NewTaskWidget.time.value.hour) - 1,
+                position: NewTaskWidget.date.value.hour,
                 onSelectedItemChanged: (index) {
-                  hour = index + 1;
+                  hour = index;
                 },
-                childCount: 12,
+                childCount: 24,
                 child: (context, index) {
-                  return ScrollWheelNumber(time: index + 1);
+                  return ScrollWheelNumber(time: index);
                 },
               ),
 
@@ -76,33 +66,13 @@ class _TimeScrollListWidgetState extends State<TimeScrollListWidget> {
 
               // minutes
               ScrollWheel(
-                position: NewTaskWidget.time.value.minute ~/ 5 + 1,
+                position: NewTaskWidget.date.value.minute ~/ 5,
                 onSelectedItemChanged: (index) {
-                  minute = index * 5 - 1;
+                  minute = index * 5;
                 },
                 childCount: 12,
                 child: (context, index) {
                   return ScrollWheelNumber(time: index * 5);
-                },
-              ),
-
-              // am pm
-              ScrollWheel(
-                position: NewTaskWidget.time.value.hour > 12 ? 1 : 0,
-                onSelectedItemChanged: (index) {
-                  isAm = index;
-                },
-                childCount: 2,
-                child: (context, index) {
-                  if (index == 0) {
-                    return const ScrollWheelAmPm(
-                      isItAm: true,
-                    );
-                  } else {
-                    return const ScrollWheelAmPm(
-                      isItAm: false,
-                    );
-                  }
                 },
               ),
             ],

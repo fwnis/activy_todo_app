@@ -1,25 +1,31 @@
+import 'package:alarm/alarm.dart';
 import 'package:animated_line_through/animated_line_through.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
+import 'package:todo_app/utils/bottom_sheet_controller.dart';
 import 'package:todo_app/utils/date_time_round_up.dart';
 import 'package:todo_app/widgets/layout/new_task/new_task_widget.dart';
 
 class TaskItemWidget extends StatefulWidget {
   final String id;
+  final int? categoryColor;
   final Timestamp date;
   final String name;
   final bool completed;
-  final bool pinned;
+  final bool useAlarm;
+  final int alarmId;
 
   const TaskItemWidget(
       {super.key,
       required this.name,
+      this.categoryColor,
       required this.completed,
       required this.date,
-      required this.pinned,
+      required this.useAlarm,
+      required this.alarmId,
       required this.id});
 
   @override
@@ -36,15 +42,18 @@ class _TaskItemWidgetState extends State<TaskItemWidget>
     ));
   }
 
-  handleDeleteTask() {
+  handleDeleteTask() async {
     final db = FirebaseFirestore.instance;
     final user = FirebaseAuth.instance.currentUser;
-    db
-        .collection("users")
-        .doc(user?.uid)
-        .collection("tasks")
-        .doc(widget.id)
-        .delete();
+    final collection =
+        db.collection("users").doc(user?.uid).collection("tasks");
+    final task = await collection.doc(widget.id).get().then(
+          (value) => value.data(),
+        );
+
+    await Alarm.stop(task!["alarmId"]);
+
+    collection.doc(widget.id).delete();
   }
 
   handleCompleteTask(bool? val) {
@@ -57,22 +66,13 @@ class _TaskItemWidgetState extends State<TaskItemWidget>
         .doc(widget.id)
         .update({"completed": val});
     _controller.reset();
-    NewTaskWidget.date.value = DateTime.now().add(Duration(days: 2));
   }
 
-  handlePinTask(bool? val) {
-    final db = FirebaseFirestore.instance;
-    final user = FirebaseAuth.instance.currentUser;
-    db
-        .collection("users")
-        .doc(user?.uid)
-        .collection("tasks")
-        .doc(widget.id)
-        .update({"pinned": val});
-  }
+  _handleSetNewTaskWidget() {}
 
   late AnimationController _controller;
   late Animation<Offset> _animation;
+  late Stream<AlarmSettings> _stream;
 
   @override
   void initState() {
@@ -87,12 +87,47 @@ class _TaskItemWidgetState extends State<TaskItemWidget>
       parent: _controller,
       curve: Curves.fastOutSlowIn,
     ));
+    
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  bool isRinging = false;
+
+  String getDay(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+    final formatedTime = DateFormat("HH:mm")
+        .format(alignDateTime(date, const Duration(minutes: 5)));
+    final dateToCheck = date;
+    final aDate =
+        DateTime(dateToCheck.year, dateToCheck.month, dateToCheck.day);
+    if (aDate == today) {
+      return widget.useAlarm ? "Today, $formatedTime" : "Today";
+    } else if (aDate == yesterday) {
+      return widget.useAlarm ? "Yesterday, $formatedTime" : "Yesterday";
+    } else if (aDate == tomorrow) {
+      return widget.useAlarm ? "Tomorrow, $formatedTime" : "Tomorrow";
+    } else {
+      return DateFormat("EEEEE, HH:mm")
+          .format(alignDateTime(date, const Duration(minutes: 5)));
+    }
+  }
+
+  bool compareDates(DateTime date) {
+    DateTime now = DateTime.now();
+    if (now.compareTo(date) > 0 && widget.completed == false) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @override
@@ -117,23 +152,14 @@ class _TaskItemWidgetState extends State<TaskItemWidget>
         startActionPane: ActionPane(motion: const DrawerMotion(), children: [
           SlidableAction(
             onPressed: (context) {
-              handlePinTask(!widget.pinned);
-              if (!widget.pinned) {
-                _handleSnackBar("Task pinned", Colors.indigoAccent, 800);
-              } else {
-                _handleSnackBar("Task unpinned", Colors.indigoAccent, 800);
-              }
-            },
-            icon: Icons.push_pin_outlined,
-            backgroundColor: Colors.indigoAccent,
-          ),
-          SlidableAction(
-            onPressed: (context) {
-              _controller.forward();
-              Future.delayed(const Duration(milliseconds: 200), () {
-                handleDeleteTask();
-                _controller.reset();
-              });
+              _handleSetNewTaskWidget();
+              bottomSheetController.handleBottomSheet(
+                context,
+                NewTaskWidget(
+                  entityId: widget.id,
+                ),
+                600,
+              );
             },
             icon: Icons.edit,
             backgroundColor: Colors.amber,
@@ -153,28 +179,31 @@ class _TaskItemWidgetState extends State<TaskItemWidget>
                   color: widget.completed ? Colors.grey : Colors.grey.shade800),
             ),
           ),
-          subtitle: Text(DateFormat("EEEEE, h:mm a")
-              .format(alignDateTime(
-                  widget.date.toDate(), const Duration(minutes: 5)))
-              .toString()),
-          leading: const Align(
+          subtitle: Text(
+            getDay(widget.date.toDate()),
+            style: TextStyle(
+                color: compareDates(widget.date.toDate())
+                    ? Colors.red
+                    : Colors.grey.shade700),
+          ),
+          leading: Align(
             alignment: Alignment.center,
             widthFactor: 3,
             child: Icon(
               Icons.circle,
-              color: Colors.blue,
+              color: Color(widget.categoryColor ?? 11111),
               size: 12,
             ),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              widget.pinned
-                  ? const Icon(
-                      Icons.push_pin_outlined,
-                      size: 20,
-                    )
-                  : const SizedBox(),
+              StreamBuilder(
+                stream: null,
+                builder: (context, snapshot) {
+                  return SizedBox();
+                },
+              ),
               Checkbox(
                 activeColor: Colors.amber,
                 value: widget.completed,

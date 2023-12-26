@@ -5,13 +5,17 @@ class BottomSheetController {
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
-      builder: (context) => Padding(
+      builder: (context) => Container(
         padding:
             EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          height: height,
-          child: child,
+        height: height + MediaQuery.of(context).viewInsets.bottom,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: Padding(
+            padding: const EdgeInsets.all(24),
+            child: child,
+          ),
         ),
       ),
     );
